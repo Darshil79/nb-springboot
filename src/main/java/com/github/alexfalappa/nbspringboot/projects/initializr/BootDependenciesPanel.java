@@ -78,14 +78,29 @@ public class BootDependenciesPanel extends javax.swing.JPanel implements Scrolla
         initComponents();
     }
 
+
     public void init(JsonNode metaData) {
         JsonNode depArray = metaData.path("dependencies").path("values");
         final int nodeNum = depArray.size();
-        // remove informative label
+
         if (nodeNum > 0) {
             this.remove(lNotInitialized);
         }
-        // read used deps counts from prefs
+
+        Map<String, Integer> depsMap = getDependenciesMap();
+
+        Set<String> freqDepsSet = getFrequentlyUsedDependenciesSet(depsMap);
+
+        createFrequentlyUsedDependenciesCheckboxes(depArray, freqDepsSet);
+
+        createOtherDependenciesCheckboxes(depArray, freqDepsSet);
+
+        initialized = true;
+        unitIncrement = null;
+        blockIncrement = null;
+    }
+
+    private Map<String, Integer> getDependenciesMap() {
         Preferences prefs = depsCountPrefNode();
         Map<String, Integer> depsMap = new HashMap<>();
         try {
@@ -97,12 +112,15 @@ public class BootDependenciesPanel extends javax.swing.JPanel implements Scrolla
         } catch (BackingStoreException ex) {
             Exceptions.printStackTrace(ex);
         }
-        // use a priority queue to rank dependencies 
+        return depsMap;
+    }
+
+    private Set<String> getFrequentlyUsedDependenciesSet(Map<String, Integer> depsMap) {
         PriorityQueue<Map.Entry<String, Integer>> pq = new PriorityQueue<>(freqUsedDepsNumToShow, depsCountComparator);
         for (Map.Entry<String, Integer> entry : depsMap.entrySet()) {
             pq.add(entry);
         }
-        // put top N deps in a set for quick reference below
+
         logger.log(Level.FINER, "Top {0} dependencies:", freqUsedDepsNumToShow);
         Set<String> freqDepsSet = new HashSet<>();
         for (int i = 0; i < freqUsedDepsNumToShow && !pq.isEmpty(); i++) {
@@ -110,22 +128,23 @@ public class BootDependenciesPanel extends javax.swing.JPanel implements Scrolla
             logger.finer(depName);
             freqDepsSet.add(depName);
         }
-        // create a group of checkboxes for frequently used deps
+        return freqDepsSet;
+    }
+
+    private void createFrequentlyUsedDependenciesCheckboxes(JsonNode depArray, Set<String> freqDepsSet) {
         if (!freqDepsSet.isEmpty()) {
-            // group label
             JLabel lGroup = new JLabel(LABEL_FREQUENTLY_USED);
             lGroup.setFont(lGroup.getFont().deriveFont(Font.BOLD, lGroup.getFont().getSize() + 2));
             grpLabels.add(lGroup);
             this.add(lGroup, constraintsForGroupLabel(true));
-            // prepare frequently used dependencies checkboxes
-            for (int i = 0; i < nodeNum; i++) {
+
+            for (int i = 0; i < depArray.size(); i++) {
                 JsonNode gn = depArray.get(i);
                 final JsonNode valArray = gn.path("values");
                 for (int j = 0; j < valArray.size(); j++) {
                     JsonNode dn = valArray.get(j);
                     final String id = dn.path("id").asText();
                     if (freqDepsSet.contains(id)) {
-                        // distribute on 2 columns
                         this.add(toggleBoxForNode(LABEL_FREQUENTLY_USED, dn), constraintsForDepCheckbox());
                     }
                 }
@@ -133,16 +152,17 @@ public class BootDependenciesPanel extends javax.swing.JPanel implements Scrolla
         } else {
             logger.finer("There are no previously used dependencies available");
         }
-        // prepare other dependencies checkboxes
-        for (int i = 0; i < nodeNum; i++) {
+    }
+
+    private void createOtherDependenciesCheckboxes(JsonNode depArray, Set<String> freqDepsSet) {
+        for (int i = 0; i < depArray.size(); i++) {
             JsonNode gn = depArray.get(i);
             final String groupName = gn.path("name").asText();
-            // group label
             JLabel lGroup = new JLabel(groupName);
             lGroup.setFont(lGroup.getFont().deriveFont(Font.BOLD, lGroup.getFont().getSize() + 2));
             grpLabels.add(lGroup);
             this.add(lGroup, constraintsForGroupLabel(i == 0 && freqDepsSet.isEmpty()));
-            // starter checkboxes
+
             final JsonNode valArray = gn.path("values");
             for (int j = 0; j < valArray.size(); j++) {
                 JsonNode dn = valArray.get(j);
@@ -152,11 +172,8 @@ public class BootDependenciesPanel extends javax.swing.JPanel implements Scrolla
                 }
             }
         }
-        initialized = true;
-        // force recompute of increments
-        unitIncrement = null;
-        blockIncrement = null;
     }
+
 
     public static void updateRememberedDeps(Collection<String> deps) {
         // add to counts in prefs
