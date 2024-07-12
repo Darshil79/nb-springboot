@@ -313,6 +313,8 @@ public class BootDependenciesPanel extends javax.swing.JPanel implements Scrolla
 
         setLayout(new java.awt.GridBagLayout());
 
+
+        
         lNotInitialized.setText("Not initialized");
         lNotInitialized.setEnabled(false);
         add(lNotInitialized, new java.awt.GridBagConstraints());
