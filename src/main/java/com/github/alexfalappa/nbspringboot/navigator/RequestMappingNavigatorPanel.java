@@ -68,7 +68,7 @@ public class RequestMappingNavigatorPanel implements NavigatorPanel {
     private final ETable table;
     private final MappedElementsModel mappedElementsModel;
 
-    private final ElementScanningTaskFactory mappedElementGatheringTaskFactory;
+    private final ElementScanningTaskFactory gatheringTaskFactory;
 
     /**
      * public no arg constructor needed for system to instantiate provider well
@@ -76,7 +76,7 @@ public class RequestMappingNavigatorPanel implements NavigatorPanel {
     public RequestMappingNavigatorPanel() {
         table = new ETable();
         mappedElementsModel = new MappedElementsModel();
-        mappedElementGatheringTaskFactory = new ElementScanningTaskFactory(table, mappedElementsModel);
+        gatheringTaskFactory = new ElementScanningTaskFactory(table, mappedElementsModel);
         table.setModel(mappedElementsModel);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         table.setColumnSorted(0, true, 1);
@@ -134,12 +134,12 @@ public class RequestMappingNavigatorPanel implements NavigatorPanel {
     public void panelActivated(Lookup context) {
         this.currentContext = context.lookup(MY_DATA);
         this.currentContext.addLookupListener(this.contextListener);
-        this.mappedElementGatheringTaskFactory.activate();
+        this.gatheringTaskFactory.activate();
     }
 
     @Override
     public void panelDeactivated() {
-        this.mappedElementGatheringTaskFactory.deactivate();
+        this.gatheringTaskFactory.deactivate();
         this.currentContext.removeLookupListener(this.contextListener);
         this.currentContext = null;
     }
