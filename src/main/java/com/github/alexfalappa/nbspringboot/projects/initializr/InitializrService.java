@@ -157,8 +157,7 @@ public class InitializrService {
         return dependencyMetaMap.get(bootVersion);
     }
 
-    public InputStream getProject(String bootVersion, String mvnGroup, String mvnArtifact, String mvnVersion, String mvnName,
-            String mvnDesc, String packaging, String pkg, String lang, String javaVersion, String deps) throws Exception {
+    public InputStream getProject(ProjectRequest request) throws Exception {
         // set connection timeouts
         timeoutFromPrefs();
         // prepare parameterized url
@@ -166,29 +165,33 @@ public class InitializrService {
                 PrefConstants.DEFAULT_INITIALIZR_URL);
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(serviceUrl.concat("/starter.zip"))
                 .queryParam("type", "maven-project")
-                .queryParam("bootVersion", bootVersion)
-                .queryParam("groupId", mvnGroup)
-                .queryParam("artifactId", mvnArtifact)
-                .queryParam("version", mvnVersion)
-                .queryParam("packaging", packaging)
-                .queryParam("name", mvnName)
-                .queryParam("description", mvnDesc)
-                .queryParam("language", lang)
-                .queryParam("javaVersion", javaVersion)
-                .queryParam("packageName", pkg)
-                .queryParam("dependencies", deps);
+                .queryParam("bootVersion", request.getBootVersion())
+                .queryParam("groupId", request.getMvnGroup())
+                .queryParam("artifactId", request.getMvnArtifact())
+                .queryParam("version", request.getMvnVersion())
+                .queryParam("packaging", request.getPackaging())
+                .queryParam("name", request.getMvnName())
+                .queryParam("description", request.getMvnDesc())
+                .queryParam("language", request.getLang())
+                .queryParam("javaVersion", request.getJavaVersion())
+                .queryParam("packageName", request.getPkg())
+                .queryParam("dependencies", request.getDeps());
+        
         final URI uri = builder.build().encode().toUri();
+        
         // setup request object
         RequestEntity<Void> req = RequestEntity
                 .get(uri)
                 .accept(APPLICATION_OCTET_STREAM)
                 .header("User-Agent", REST_USER_AGENT)
                 .build();
+        
         // connect
         logger.info("Getting Spring Initializr project");
         logger.log(INFO, "Service URL: {0}", uri.toString());
         long start = System.currentTimeMillis();
         ResponseEntity<byte[]> respEntity = rt.exchange(req, byte[].class);
+        
         // analyze response outcome
         final HttpStatus statusCode = respEntity.getStatusCode();
         if (statusCode == OK) {
@@ -205,7 +208,7 @@ public class InitializrService {
             throw new RuntimeException(errMessage);
         }
     }
-
+    
     private void timeoutFromPrefs() {
         final int serviceTimeoutMillis = 1000 * NbPreferences.forModule(PrefConstants.class).getInt(PREF_INITIALIZR_TIMEOUT, 30);
         requestFactory.setConnectTimeout(serviceTimeoutMillis);
